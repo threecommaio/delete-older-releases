@@ -58,7 +58,7 @@ if (deletePattern) {
   console.log(`releases containing ${deletePattern} will be targeted`);
 }
 
-const dryRun = process.env.INPUT_DRYRUN === "false";
+const dryRun = process.env.INPUT_DRYRUN === "true";
 
 const commonOpts = {
   host: "api.github.com",
