@@ -57,6 +57,9 @@ let deletePattern = process.env.INPUT_DELETE_TAG_PATTERN || "";
 if (deletePattern) {
   console.log(`releases containing ${deletePattern} will be targeted`);
 }
+
+const dryRun = process.env.INPUT_DRYRUN === "false";
+
 const commonOpts = {
   host: "api.github.com",
   port: 443,
@@ -113,36 +116,40 @@ async function deleteOlderReleases(keepLatest) {
     for (let i = 0; i < releaseIdsAndTags.length; i++) {
       const { id: releaseId, tagName } = releaseIdsAndTags[i];
 
-      try {
-        console.log(`starting to delete ${tagName} with id ${releaseId}`);
+      if (!dryRun) {
+        try {
+          console.log(`starting to delete ${tagName} with id ${releaseId}`);
 
-        const _ = await fetch({
-          ...commonOpts,
-          path: `/repos/${owner}/${repo}/releases/${releaseId}`,
-          method: "DELETE",
-        });
+          const _ = await fetch({
+            ...commonOpts,
+            path: `/repos/${owner}/${repo}/releases/${releaseId}`,
+            method: "DELETE",
+          });
 
-        if (shouldDeleteTags) {
-          try {
-            const _ = await fetch({
-              ...commonOpts,
-              path: `/repos/${owner}/${repo}/git/refs/tags/${tagName}`,
-              method: "DELETE",
-            });
-          } catch (error) {
-            console.error(
-              `🌶  failed to delete tag "${tagName}"  <- ${error.message}`
-            );
-            hasError = true;
-            break;
+          if (shouldDeleteTags) {
+            try {
+              const _ = await fetch({
+                ...commonOpts,
+                path: `/repos/${owner}/${repo}/git/refs/tags/${tagName}`,
+                method: "DELETE",
+              });
+            } catch (error) {
+              console.error(
+                `🌶  failed to delete tag "${tagName}"  <- ${error.message}`
+              );
+              hasError = true;
+              break;
+            }
           }
+        } catch (error) {
+          console.error(
+            `🌶  failed to delete release with id "${releaseId}"  <- ${error.message}`
+          );
+          hasError = true;
+          break;
         }
-      } catch (error) {
-        console.error(
-          `🌶  failed to delete release with id "${releaseId}"  <- ${error.message}`
-        );
-        hasError = true;
-        break;
+      } else {
+        console.log(`🚧  dry-run mode. skipping deletion of ${tagName} with id ${releaseId}`);
       }
     }
 
